@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch Tháng & Công Việc - MySpace</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind & Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        jakarta: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#4f46e5',
+                        primaryHover: '#4338ca',
+                        lunarText: '#8b5cf6', // Màu cho ngày âm
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px;}
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        :root {
+            --bg-gradient: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+            --shadow-subtle: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+            --border-blue: #bfdbfe;
+        }
+
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-gradient); }
+        * { -webkit-tap-highlight-color: transparent; }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 1px;
+            background-color: #e2e8f0;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .calendar-cell {
+            background-color: #ffffff;
+            min-height: 120px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .calendar-cell:hover {
+            background-color: #f8fafc;
+        }
+
+        .calendar-cell.other-month {
+            background-color: #f8fafc;
+            opacity: 0.6;
+        }
+
+        .calendar-cell.is-today {
+            background-color: #eff6ff;
+        }
+
+        .calendar-cell.is-today .solar-date {
+            background-color: #4f46e5;
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .calendar-cell.selected {
+            box-shadow: inset 0 0 0 2px #4f46e5;
+            z-index: 10;
+        }
+
+        .solar-date { font-weight: 600; font-size: 1rem; color: #1e293b; line-height: 1; }
+        .lunar-date { font-size: 0.75rem; color: #8b5cf6; font-weight: 600; line-height: 1; }
+
+        .calendar-tasks {
+            margin-top: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            overflow: hidden;
+            flex: 1;
+        }
+        
+        .calendar-task-item {
+            font-size: 0.65rem;
+            padding: 3px 5px;
+            border-radius: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+            line-height: 1.2;
+            transition: all 0.2s;
+        }
+        
+        .calendar-task-item.pending {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+        }
+        
+        .calendar-task-item.completed {
+            background-color: #f1f5f9;
+            color: #94a3b8;
+            text-decoration: line-through;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .calendar-task-more {
+            font-size: 0.65rem;
+            color: #64748b;
+            font-weight: 600;
+            padding-top: 2px;
+        }
+
+        /* Side Panel */
+        #taskPanel {
+            box-shadow: -5px 0 25px rgba(0,0,0,0.05);
+        }
+        
+        /* Modals and Items (Reused from previous logic) */
+        .modal-backdrop {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.25s ease;
+        }
+        .modal-backdrop.open { opacity: 1; visibility: visible; }
+        .modal-container { background: #ffffff; width: 100%; max-width: 680px; border-radius: 16px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; max-height: 85vh; overflow: hidden; transform: translateY(20px); transition: transform 0.25s ease; }
+        .modal-backdrop.open .modal-container { transform: translateY(0); }
+        
+        .todo-item { display: flex; align-items: flex-start; padding: 12px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; transition: all 0.2s; position: relative; margin-bottom: 8px; }
+        .todo-item.completed .todo-text { text-decoration: line-through; color: #94a3b8; }
+        .checkbox { width: 20px; height: 20px; border-radius: 6px; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; margin-top: 2px;}
+        .todo-item.completed .checkbox { background-color: #10b981; border-color: #10b981; }
+        .checkbox svg { width: 12px; height: 12px; fill: none; stroke: #ffffff; stroke-width: 3; stroke-linecap: round; opacity: 0; }
+        .todo-item.completed .checkbox svg { opacity: 1; }
+
+        /* Timeline Styles */
+        .timeline-event { position: relative; padding-bottom: 16px; padding-left: 28px;}
+        .timeline-event::before { content: ''; position: absolute; left: 10px; top: 6px; bottom: -6px; width: 2px; background-color: #cbd5e1; }
+        .timeline-event:last-child::before { display: none; }
+        .timeline-marker { position: absolute; left: 0; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: #ffffff; border: 2px solid #10b981; display: flex; align-items: center; justify-content: center; color: #10b981; z-index: 1; }
+        .timeline-marker.undo { border-color: #94a3b8; color: #94a3b8; }
+
+        .calendar-task-item.google-event { background-color: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+        .google-status { font-size: 0.7rem; color: #64748b; margin-right: 4px; }
+        .notes-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; min-height: 0; }
+        .notes-sidebar { border-right: 1px solid #e2e8f0; padding-right: 14px; }
+        .notes-folder { display: flex; align-items: center; gap: 7px; padding: 9px 10px; border-radius: 8px; color: #64748b; cursor: pointer; font-size: 0.85rem; }
+        .notes-folder:hover, .notes-folder.active { background: #eef2ff; color: #4f46e5; }
+        .notes-folder .folder-count { margin-left: auto; color: #94a3b8; font-size: 0.7rem; }
+        .notes-editor { min-width: 0; display: flex; flex-direction: column; }
+        .notes-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+        .note-card { min-width: 150px; max-width: 210px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; }
+        .note-card:hover, .note-card.active { border-color: #818cf8; background: #eef2ff; }
+        .note-card strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem; }
+        .note-card small { display: block; color: #94a3b8; margin-top: 5px; font-size: 0.68rem; }
+        .note-title { width: 100%; border: 0; border-bottom: 1px solid #e2e8f0; padding: 15px 2px 10px; font-size: 1.25rem; font-weight: 700; outline: none; }
+        .note-content { flex: 1; width: 100%; min-height: 250px; resize: none; border: 0; padding: 14px 2px; outline: none; line-height: 1.7; color: #475569; }
+        .notes-empty { color: #94a3b8; text-align: center; padding: 50px 15px; }
+        @media (max-width: 640px) { .notes-layout { grid-template-columns: 1fr; } .notes-sidebar { border-right: 0; border-bottom: 1px solid #e2e8f0; padding: 0 0 12px; } .notes-folder { display: inline-flex; margin-right: 4px; } .notes-sidebar > div:first-child { display: flex; overflow-x: auto; } }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans h-screen flex overflow-hidden">
+
+    <aside class="w-20 lg:w-64 bg-white border-r border-gray-200 flex flex-col justify-between hidden md:flex transition-all duration-300 shrink-0 z-20">
+        <div>
+            <div class="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-gray-200">
+                <i class="ph-fill ph-planet text-3xl text-primary"></i>
+                <span class="ml-3 font-bold text-lg hidden lg:block tracking-wide">MySpace</span>
+            </div>
+            <nav class="mt-6 flex flex-col gap-2 px-3">
+                <a href="dashboard.html" class="flex items-center px-3 py-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors group">
+                    <i class="ph ph-squares-four text-xl"></i>
+                    <span class="ml-3 font-medium hidden lg:block">Tổng quan</span>
+                </a>
+                <a href="work.html" class="flex items-center px-3 py-2.5 bg-indigo-50 text-primary rounded-lg group">
+                    <i class="ph ph-kanban text-xl"></i>
+                    <span class="ml-3 font-medium hidden lg:block">Công việc</span>
+                </a>
+                <a href="learning.html" class="flex items-center px-3 py-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors">
+                    <i class="ph ph-book-open text-xl"></i>
+                    <span class="ml-3 font-medium hidden lg:block">Học tập</span>
+                </a>
+                <a href="#" class="flex items-center px-3 py-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors">
+                    <i class="ph ph-heartbeat text-xl"></i>
+                    <span class="ml-3 font-medium hidden lg:block">Cuộc sống</span>
+                </a>
+            </nav>
+        </div>
+        <div class="p-4 border-t border-gray-200 flex items-center justify-center lg:justify-start">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-purple-500 text-white flex items-center justify-center font-bold">U</div>
+            <div class="ml-3 hidden lg:block">
+                <p class="text-sm font-semibold">Người dùng</p>
+                <p class="text-xs text-gray-500">Cá nhân</p>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        <!-- Header -->
+        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-6 shrink-0 z-10">
+            <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="ph-fill ph-calendar text-primary"></i> Quản lý Lịch Tháng & Âm Lịch
+            </h1>
+            <div class="flex items-center gap-3">
+                <span id="googleCalendarStatus" class="google-status hidden sm:inline">Google Calendar chưa kết nối</span>
+                <button id="btnGoogleCalendar" class="flex items-center gap-2 px-3 py-1.5 bg-white border border-blue-200 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors">
+                    <i class="ph ph-calendar-plus text-lg"></i> Kết nối Google
+                </button>
+                <button id="btnOpenTimeline" class="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                    <i class="ph ph-clock-counter-clockwise text-lg text-green-500"></i> Dòng thời gian
+                </button>
+                <button id="btnOpenHistory" class="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors relative">
+                    <i class="ph ph-trash text-lg text-red-500"></i> Thùng rác
+                    <span id="trashBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full hidden">0</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Calendar Container -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+            <div class="max-w-6xl mx-auto flex flex-col h-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 lg:p-6">
+                
+                <!-- Controls Row -->
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-4" id="monthControls">
+                        <button id="btnPrevMonth" class="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><i class="ph ph-caret-left text-xl"></i></button>
+                        <h2 id="monthYearLabel" class="text-2xl font-bold text-gray-800 min-w-[180px] text-center">Tháng --/----</h2>
+                        <button id="btnNextMonth" class="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><i class="ph ph-caret-right text-xl"></i></button>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <!-- View Toggle -->
+                        <div class="flex bg-gray-100 p-1 rounded-lg">
+                            <button id="btnCalendarView" class="px-4 py-1.5 bg-white shadow-sm rounded-md text-sm font-medium text-gray-800 transition-colors">Lịch</button>
+                            <button id="btnListView" class="px-4 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors rounded-md">Danh sách</button>
+                            <button id="btnNotesView" class="px-4 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors rounded-md">Ghi chú</button>
+                        </div>
+                        <button id="btnToday" class="px-4 py-2 bg-indigo-50 text-primary hover:bg-indigo-100 font-semibold rounded-lg transition-colors border border-indigo-100 hidden sm:block">
+                            Về Hôm nay
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Calendar View Container -->
+                <div id="viewCalendar" class="flex flex-col flex-1">
+                    <!-- Days of Week Header -->
+                    <div class="grid grid-cols-7 gap-1 mb-2">
+                        <div class="text-center text-sm font-bold text-gray-500 py-2">Thứ 2</div>
+                        <div class="text-center text-sm font-bold text-gray-500 py-2">Thứ 3</div>
+                        <div class="text-center text-sm font-bold text-gray-500 py-2">Thứ 4</div>
+                        <div class="text-center text-sm font-bold text-gray-500 py-2">Thứ 5</div>
+                        <div class="text-center text-sm font-bold text-gray-500 py-2">Thứ 6</div>
+                        <div class="text-center text-sm font-bold text-gray-500 py-2">Thứ 7</div>
+                        <div class="text-center text-sm font-bold text-red-400 py-2">CN</div>
+                    </div>
+
+                    <!-- Calendar Grid -->
+                    <div id="calendarGrid" class="calendar-grid flex-1">
+                        <!-- Cells generated by JS -->
+                    </div>
+                    
+                    <div class="mt-4 flex gap-4 text-xs font-medium text-gray-500 justify-end items-center">
+                        <div class="flex items-center gap-1.5"><div class="px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-600 rounded text-[10px]">Chưa xong</div></div>
+                        <div class="flex items-center gap-1.5"><div class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-400 line-through rounded text-[10px]">Đã xong</div></div>
+                        <div class="flex items-center gap-1 ml-2"><span class="text-lunarText font-bold">ÂL</span> Ngày Âm Lịch</div>
+                    </div>
+                </div>
+                
+                <!-- List View Container -->
+                <div id="viewList" class="hidden flex-1 overflow-y-auto pr-2 pb-4">
+                    <!-- List View Content generated by JS -->
+                </div>
+
+                <div id="viewNotes" class="hidden flex-1 overflow-y-auto">
+                    <div class="notes-layout h-full">
+                        <aside class="notes-sidebar">
+                            <div id="notesFolders"></div>
+                            <button id="btnAddFolder" class="mt-3 w-full px-3 py-2 border border-dashed border-indigo-200 text-indigo-600 rounded-lg text-xs font-semibold hover:bg-indigo-50"><i class="ph ph-folder-plus mr-1"></i> Thêm thư mục</button>
+                        </aside>
+                        <section class="notes-editor">
+                            <div class="flex justify-between items-center gap-3">
+                                <h3 id="notesFolderTitle" class="font-bold text-gray-800">Ghi chú</h3>
+                                <button id="btnAddNote" class="px-3 py-2 bg-primary text-white rounded-lg text-xs font-semibold hover:bg-primaryHover"><i class="ph ph-note-blank mr-1"></i> Ghi chú mới</button>
+                            </div>
+                            <div id="notesList" class="notes-list mt-4"></div>
+                            <div id="noteEditor" class="hidden flex-1 flex flex-col">
+                                <input id="noteTitleInput" class="note-title" placeholder="Tiêu đề ghi chú">
+                                <textarea id="noteContentInput" class="note-content" placeholder="Viết ghi chú của bạn..."></textarea>
+                                <div class="flex justify-between items-center border-t border-gray-100 pt-3 text-xs text-gray-400"><span id="noteSavedStatus">Đã lưu tự động</span><button id="btnDeleteNote" class="text-red-500 hover:text-red-700 font-semibold"><i class="ph ph-trash mr-1"></i>Xóa ghi chú</button></div>
+                            </div>
+                            <div id="notesEmpty" class="notes-empty">Chọn một ghi chú hoặc tạo ghi chú mới.</div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Overlay for mobile/closing panel -->
+        <div id="panelOverlay" class="absolute inset-0 bg-gray-900/20 backdrop-blur-sm z-30 hidden transition-opacity opacity-0"></div>
+        
+        <!-- Task Panel -->
+        <div id="taskPanel" class="absolute right-0 top-0 bottom-0 w-80 md:w-96 bg-white z-40 transform translate-x-full transition-transform duration-300 flex flex-col border-l border-gray-200">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <div>
+                    <h3 id="panelDateLabel" class="font-bold text-lg text-gray-800">--/--/----</h3>
+                    <p id="panelLunarLabel" class="text-xs text-lunarText font-medium mt-0.5">Âm lịch: --/--</p>
+                </div>
+                <button id="btnClosePanel" class="p-2 hover:bg-gray-200 rounded-full transition-colors"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            
+            <div class="p-4 border-b border-gray-100">
+                <form id="taskForm" class="flex flex-col gap-2">
+                    <input type="text" id="taskInput" placeholder="Thêm việc cho ngày này..." class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" required>
+                    <button type="submit" class="w-full bg-primary hover:bg-primaryHover text-white py-2 rounded-lg text-sm font-semibold transition-colors flex justify-center items-center gap-2">
+                        <i class="ph ph-plus"></i> Thêm công việc
+                    </button>
+                </form>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 bg-gray-50/50">
+                <div id="emptyTaskState" class="text-center py-10 hidden">
+                    <i class="ph ph-coffee text-4xl text-gray-300 mb-2"></i>
+                    <p class="text-sm text-gray-500">Chưa có công việc nào.</p>
+                </div>
+                <div id="taskList" class="flex flex-col">
+                    <!-- Tasks injected here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Timeline -->
+    <div class="modal-backdrop" id="modalTimeline">
+        <div class="modal-container">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-lg flex items-center gap-2"><i class="ph-fill ph-clock-counter-clockwise text-green-500"></i> Dòng thời gian hoạt động</h3>
+                <button class="close-modal-btn p-1 hover:bg-gray-200 rounded"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            <div class="p-4 flex gap-2 border-b border-gray-100">
+                <input type="text" id="timelineSearch" placeholder="Tìm việc..." class="px-3 py-1.5 border border-gray-200 rounded text-sm w-full outline-none focus:border-primary">
+                <button id="btnClearTimeline" class="px-3 py-1.5 border border-red-200 text-red-500 hover:bg-red-50 rounded text-sm whitespace-nowrap">Xóa log</button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-white" id="timelineContent">
+                <!-- Logs rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal History/Trash -->
+    <div class="modal-backdrop" id="modalHistory">
+        <div class="modal-container">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-lg flex items-center gap-2"><i class="ph-fill ph-trash text-red-500"></i> Thùng rác công việc</h3>
+                <button class="close-modal-btn p-1 hover:bg-gray-200 rounded"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            <div class="p-4 flex justify-between items-center border-b border-gray-100">
+                <span class="text-sm text-gray-500" id="trashCountText">0 mục</span>
+                <button id="btnEmptyTrash" class="px-3 py-1.5 border border-red-200 text-red-500 hover:bg-red-50 rounded text-sm">Dọn sạch</button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1 bg-white flex flex-col gap-3" id="trashContent">
+                <!-- Trash items -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_CLIENT_ID = '685074086657-g9ci1j3o08b4dtge92n2nk1bogflt5p5.apps.googleusercontent.com';
+        const GOOGLE_DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
+        const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+        let googleTokenClient = null;
+        let googleAccessToken = null;
+        let googleEvents = [];
+
+        function setGoogleStatus(message, connected = false) {
+            const status = document.getElementById('googleCalendarStatus');
+            const button = document.getElementById('btnGoogleCalendar');
+            status.textContent = message;
+            status.classList.remove('hidden');
+            button.innerHTML = connected ? '<i class="ph ph-arrows-clockwise text-lg"></i> Làm mới Google' : '<i class="ph ph-calendar-plus text-lg"></i> Kết nối Google';
+        }
+
+        async function initializeGoogleCalendar() {
+            if (!window.gapi || !window.google?.accounts?.oauth2 || googleTokenClient) return;
+            await new Promise(resolve => gapi.load('client', resolve));
+            await gapi.client.init({ discoveryDocs: [GOOGLE_DISCOVERY_DOC] });
+            googleTokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: GOOGLE_SCOPES,
+                callback: async response => {
+                    if (response.error) { setGoogleStatus('Không thể kết nối Google'); return; }
+                    googleAccessToken = response.access_token;
+                    gapi.client.setToken({ access_token: googleAccessToken });
+                    setGoogleStatus('Google Calendar đã kết nối', true);
+                    await loadGoogleEvents();
+                }
+            });
+        }
+
+        function connectGoogleCalendar() {
+            if (!googleTokenClient) {
+                setGoogleStatus('Đang tải kết nối Google...');
+                return;
+            }
+            googleTokenClient.requestAccessToken({ prompt: googleAccessToken ? '' : 'consent' });
+        }
+
+        async function loadGoogleEvents() {
+            if (!googleAccessToken) return;
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            try {
+                const response = await gapi.client.calendar.events.list({
+                    calendarId: 'primary',
+                    timeMin: new Date(year, month, 1).toISOString(),
+                    timeMax: new Date(year, month + 1, 1).toISOString(),
+                    showDeleted: false,
+                    singleEvents: true,
+                    orderBy: 'startTime',
+                    maxResults: 250
+                });
+                googleEvents = response.result.items || [];
+                renderCalendar();
+            } catch (error) {
+                googleEvents = [];
+                setGoogleStatus('Không tải được sự kiện Google');
+                console.error('Google Calendar error:', error);
+                renderCalendar();
+            }
+        }
+
+        function googleEventDate(event) {
+            return event.start?.date || event.start?.dateTime?.slice(0, 10);
+        }
+
+        // --- 1. THUẬT TOÁN ÂM LỊCH VIỆT NAM (RÚT GỌN TỪ HỒ NGỌC ĐỨC) ---
+        // Thuật toán tính ngày âm lịch dựa trên công thức thiên văn.
+        const PI = Math.PI;
+        function jdFromDate(dd, mm, yyyy) {
+            let a = Math.floor((14 - mm) / 12);
+            let y = yyyy + 4800 - a;
+            let m = mm + 12 * a - 3;
+            let jd = dd + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+            if (jd < 2299161) jd = dd + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - 32083;
+            return jd;
+        }
+        function jdToDate(jd) {
+            let a, b, c, d, e, m, day, month, year;
+            if (jd > 2299160) {
+                a = jd + 32044; b = Math.floor((4 * a + 3) / 146097); c = a - Math.floor((146097 * b) / 4);
+            } else {
+                b = 0; c = jd + 32082;
+            }
+            d = Math.floor((4 * c + 3) / 1461); e = c - Math.floor((1461 * d) / 4); m = Math.floor((5 * e + 2) / 153);
+            day = e - Math.floor((153 * m + 2) / 5) + 1; month = m + 3 - 12 * Math.floor(m / 10); year = b * 100 + d - 4800 + Math.floor(m / 10);
+            return [day, month, year];
+        }
+        function getSunLongitude(jdn, timeZone) {
+            let t = (jdn - 2451545.0) / 36525;
+            let l = 280.460 + 36000.770 * t;
+            let g = 357.528 + 35999.050 * t;
+            let lambda = l + 1.915 * Math.sin(g * PI / 180) + 0.020 * Math.sin(2 * g * PI / 180);
+            return lambda * PI / 180;
+        }
+        function getNewMoonDay(k, timeZone) {
+            let t = k / 1236.85;
+            let t2 = t * t, t3 = t2 * t;
+            let dr = 180 - 180/PI * (PI/180 * (259.183275 - 1934.1420 * t + 0.002078 * t2 + 0.000002 * t3));
+            let jd = 2415020.75933 + 29.53058868 * k + 0.0001178 * t2 - 0.000000155 * t3 + 0.00033 * Math.sin((166.56 + 132.87 * t - 0.009173 * t2) * PI/180);
+            let m = 359.2242 + 29.10535608 * k - 0.0000333 * t2 - 0.00000347 * t3;
+            let mprime = 306.0253 + 385.81691806 * k + 0.0107306 * t2 + 0.00001236 * t3;
+            let f = 21.2964 + 390.67050646 * k - 0.0016528 * t2 - 0.00000239 * t3;
+            jd += (0.1734 - 0.000393 * t) * Math.sin(m * PI/180) + 0.0021 * Math.sin(2 * m * PI/180) - 0.4068 * Math.sin(mprime * PI/180) + 0.0161 * Math.sin(2 * mprime * PI/180) - 0.0004 * Math.sin(3 * mprime * PI/180) + 0.0104 * Math.sin(2 * f * PI/180) - 0.0051 * Math.sin((m + mprime) * PI/180) - 0.0074 * Math.sin((m - mprime) * PI/180) + 0.0004 * Math.sin((2 * f + m) * PI/180) - 0.0004 * Math.sin((2 * f - m) * PI/180) - 0.0006 * Math.sin((2 * f + mprime) * PI/180) + 0.0010 * Math.sin((2 * f - mprime) * PI/180) + 0.0005 * Math.sin((m + 2 * mprime) * PI/180);
+            return Math.floor(jd + 0.5 + timeZone / 24);
+        }
+        function getLunarMonth11(yy, timeZone) {
+            let off = jdFromDate(31, 12, yy) - 2415021;
+            let k = Math.floor(off / 29.530588853);
+            let nm = getNewMoonDay(k, timeZone);
+            if (nm > jdFromDate(31, 12, yy)) nm = getNewMoonDay(k - 1, timeZone);
+            return nm;
+        }
+        function getLeapMonthOffset(a11, timeZone) {
+            let k = Math.floor((a11 - 2415021.076998695) / 29.530588853 + 0.5);
+            let last = 0, i = 1, arc, nm;
+            arc = getSunLongitude(getNewMoonDay(k, timeZone), timeZone);
+            do {
+                nm = getNewMoonDay(k + i, timeZone);
+                arc = getSunLongitude(nm, timeZone);
+                if (Math.abs(arc - last) < 0.001) return i;
+                last = arc; i++;
+            } while (i < 14);
+            return 0;
+        }
+        function getLunarDate(dd, mm, yyyy) {
+            let timeZone = 7;
+            let jd = jdFromDate(dd, mm, yyyy);
+            let k = Math.floor((jd - 2415021.076998695) / 29.530588853);
+            let month, year, leap = 0;
+            let nm = getNewMoonDay(k, timeZone);
+            if (nm > jd) { nm = getNewMoonDay(k - 1, timeZone); k--; }
+            let a11 = getLunarMonth11(yyyy, timeZone);
+            let b11 = a11;
+            if (a11 >= nm) {
+                year = yyyy; a11 = getLunarMonth11(yyyy - 1, timeZone);
+            } else {
+                year = yyyy + 1; b11 = getLunarMonth11(yyyy + 1, timeZone);
+            }
+            let day = jd - nm + 1;
+            let diff = Math.floor((nm - a11) / 29);
+            let leapMonthOffset = getLeapMonthOffset(a11, timeZone);
+            if (leapMonthOffset === 0) { month = diff - 1; }
+            else {
+                if (diff === leapMonthOffset) leap = 1;
+                month = (diff < leapMonthOffset) ? diff - 1 : diff - 2;
+            }
+            if (month <= 0) month += 12;
+            if (nm >= b11) { month = 11; leap = 0; }
+            return { lDay: day, lMonth: month, lYear: year, isLeap: leap === 1 };
+        }
+
+        // --- 2. ỨNG DỤNG LỊCH THÁNG ---
+        const STORAGE_KEY = 'monthly_calendar_tasks_v1';
+        const LOGS_KEY = 'monthly_calendar_logs_v1';
+        const NOTES_KEY = 'monthly_notes_v1';
+        const FOLDERS_KEY = 'monthly_note_folders_v1';
+        
+        const requestedYear = Number(new URLSearchParams(window.location.search).get('year'));
+        const requestedMonth = Number(new URLSearchParams(window.location.search).get('month'));
+        let currentDate = requestedYear >= 1970 && requestedMonth >= 1 && requestedMonth <= 12
+            ? new Date(requestedYear, requestedMonth - 1, 1)
+            : new Date(); // Tháng đang hiển thị
+        let selectedDateStr = null; // Ngày đang chọn trong panel
+        let currentView = 'calendar'; // Trạng thái View hiện tại ('calendar' hoặc 'list')
+        
+        let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        let logs = JSON.parse(localStorage.getItem(LOGS_KEY)) || [];
+        let noteFolders = JSON.parse(localStorage.getItem(FOLDERS_KEY)) || [
+            { id: 'general', name: 'Chung', parentId: null },
+            { id: 'work', name: 'Công việc', parentId: null },
+            { id: 'ideas', name: 'Ý tưởng', parentId: null }
+        ];
+        let notes = JSON.parse(localStorage.getItem(NOTES_KEY)) || [];
+        let selectedFolderId = noteFolders[0].id;
+        let selectedNoteId = null;
+
+        // DOM Elements
+        const grid = document.getElementById('calendarGrid');
+        const monthYearLabel = document.getElementById('monthYearLabel');
+        const panel = document.getElementById('taskPanel');
+        const overlay = document.getElementById('panelOverlay');
+        const taskForm = document.getElementById('taskForm');
+        const taskInput = document.getElementById('taskInput');
+        const taskList = document.getElementById('taskList');
+        const emptyTaskState = document.getElementById('emptyTaskState');
+        const panelDateLabel = document.getElementById('panelDateLabel');
+        const panelLunarLabel = document.getElementById('panelLunarLabel');
+        const trashBadge = document.getElementById('trashBadge');
+
+        function saveNotes() {
+            localStorage.setItem(FOLDERS_KEY, JSON.stringify(noteFolders));
+            localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+        }
+
+        function renderNotes() {
+            const foldersContainer = document.getElementById('notesFolders');
+            const notesContainer = document.getElementById('notesList');
+            const folder = noteFolders.find(item => item.id === selectedFolderId) || noteFolders[0];
+            if (!folder) return;
+            selectedFolderId = folder.id;
+            document.getElementById('notesFolderTitle').textContent = folder.name;
+            function renderFolderBranch(parentId, depth = 0) {
+                return noteFolders.filter(item => (item.parentId || null) === parentId).map(item => {
+                    const count = notes.filter(note => note.folderId === item.id).length;
+                    const children = renderFolderBranch(item.id, depth + 1);
+                    return `<div class="notes-folder ${item.id === selectedFolderId ? 'active' : ''}" data-folder-id="${item.id}" style="padding-left:${10 + depth * 18}px"><i class="ph ${item.id === selectedFolderId ? 'ph-folder-open' : 'ph-folder'}"></i><span>${escapeHtml(item.name)}</span><span class="folder-count">${count}</span></div>${children}`;
+                }).join('');
+            }
+            foldersContainer.innerHTML = renderFolderBranch(null);
+            foldersContainer.querySelectorAll('[data-folder-id]').forEach(element => element.addEventListener('click', () => {
+                selectedFolderId = element.dataset.folderId;
+                selectedNoteId = null;
+                renderNotes();
+            }));
+            const folderNotes = notes.filter(note => note.folderId === selectedFolderId).sort((a, b) => b.updatedAt - a.updatedAt);
+            notesContainer.innerHTML = folderNotes.length ? folderNotes.map(note => `<div class="note-card ${note.id === selectedNoteId ? 'active' : ''}" data-note-id="${note.id}"><strong>${escapeHtml(note.title || 'Ghi chú chưa đặt tên')}</strong><small>${new Date(note.updatedAt).toLocaleDateString('vi-VN')}</small></div>`).join('') : '<div class="text-xs text-gray-400 py-2">Chưa có ghi chú</div>';
+            notesContainer.querySelectorAll('[data-note-id]').forEach(element => element.addEventListener('click', () => {
+                selectedNoteId = element.dataset.noteId;
+                renderNotes();
+                loadSelectedNote();
+            }));
+            const hasNote = notes.some(note => note.id === selectedNoteId && note.folderId === selectedFolderId);
+            document.getElementById('noteEditor').classList.toggle('hidden', !hasNote);
+            document.getElementById('notesEmpty').classList.toggle('hidden', hasNote);
+            if (hasNote) loadSelectedNote();
+        }
+
+        function loadSelectedNote() {
+            const note = notes.find(item => item.id === selectedNoteId);
+            if (!note) return;
+            document.getElementById('noteTitleInput').value = note.title;
+            document.getElementById('noteContentInput').value = note.content;
+            document.getElementById('noteSavedStatus').textContent = 'Đã lưu tự động';
+        }
+
+        function createNote() {
+            const now = Date.now();
+            const note = { id: `note_${now}`, folderId: selectedFolderId, title: 'Ghi chú mới', content: '', updatedAt: now };
+            notes.unshift(note);
+            selectedNoteId = note.id;
+            saveNotes();
+            renderNotes();
+            document.getElementById('noteTitleInput').focus();
+        }
+
+        function updateSelectedNote() {
+            const note = notes.find(item => item.id === selectedNoteId);
+            if (!note) return;
+            note.title = document.getElementById('noteTitleInput').value.trim() || 'Ghi chú chưa đặt tên';
+            note.content = document.getElementById('noteContentInput').value;
+            note.updatedAt = Date.now();
+            saveNotes();
+            document.getElementById('noteSavedStatus').textContent = 'Đã lưu tự động';
+            renderNotes();
+        }
+        
+        // Utils
+        function toIso(date) { 
+            return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+        }
+        function formatDisplay(isoStr) {
+            const [y, m, d] = isoStr.split('-');
+            return `${d}/${m}/${y}`;
+        }
+        function getTimeStr(isoTime) {
+            const d = new Date(isoTime);
+            return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+            localStorage.setItem(LOGS_KEY, JSON.stringify(logs));
+            updateTrashBadge();
+        }
+
+        function updateTrashBadge() {
+            const count = tasks.filter(t => t.deleted).length;
+            if(count > 0) {
+                trashBadge.textContent = count; trashBadge.classList.remove('hidden');
+            } else {
+                trashBadge.classList.add('hidden');
+            }
+            document.getElementById('trashCountText').textContent = `${count} mục`;
+        }
+
+        // Render Lịch
+        function renderCalendar() {
+            grid.innerHTML = '';
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth(); // 0-11
+            monthYearLabel.textContent = `Tháng ${month + 1}/${year}`;
+
+            const firstDayOfMonth = new Date(year, month, 1);
+            let startDayOfWeek = firstDayOfMonth.getDay();
+            if (startDayOfWeek === 0) startDayOfWeek = 7; // Convert Sun(0) to 7
+            
+            // Tìm ngày bắt đầu hiển thị trên grid (lùi về Thứ 2)
+            const startDate = new Date(year, month, 1 - (startDayOfWeek - 1));
+            
+            const todayIso = toIso(new Date());
+
+            // 42 ô lịch (6 tuần)
+            for (let i = 0; i < 42; i++) {
+                const cellDate = new Date(startDate);
+                cellDate.setDate(startDate.getDate() + i);
+                const isoStr = toIso(cellDate);
+                const isOtherMonth = cellDate.getMonth() !== month;
+                const isToday = isoStr === todayIso;
+
+                // Tính Âm lịch
+                const lunar = getLunarDate(cellDate.getDate(), cellDate.getMonth() + 1, cellDate.getFullYear());
+                let lunarText = lunar.lDay === 1 ? `1/${lunar.lMonth}${lunar.isLeap?'(n)':''}` : `${lunar.lDay}`;
+                
+                // Trích xuất và render tasks trực tiếp
+                const dayTasks = tasks.filter(t => !t.deleted && t.date === isoStr);
+                const dayGoogleEvents = googleEvents.filter(event => googleEventDate(event) === isoStr);
+                const MAX_TASKS = 3;
+                const visibleTasks = dayTasks.slice(0, MAX_TASKS);
+                const tasksHtml = visibleTasks.map(t => 
+                    `<div class="calendar-task-item ${t.completed ? 'completed' : 'pending'}" title="${escapeHtml(t.text)}">${escapeHtml(t.text)}</div>`
+                ).join('');
+                const googleHtml = dayGoogleEvents.slice(0, 2).map(event =>
+                    `<div class="calendar-task-item google-event" title="Google Calendar: ${escapeHtml(event.summary || '(Không có tiêu đề)')}"><i class="ph ph-google-logo"></i> ${escapeHtml(event.summary || '(Không có tiêu đề)')}</div>`
+                ).join('');
+                const totalItems = dayTasks.length + dayGoogleEvents.length;
+                const moreHtml = totalItems > MAX_TASKS ? `<div class="calendar-task-more">+${totalItems - MAX_TASKS} mục nữa</div>` : '';
+
+                const cell = document.createElement('div');
+                cell.className = `calendar-cell ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'is-today' : ''}`;
+                cell.dataset.date = isoStr;
+                
+                cell.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <span class="solar-date">${cellDate.getDate()}</span>
+                        <span class="lunar-date">${lunarText}</span>
+                    </div>
+                    <div class="calendar-tasks">
+                        ${tasksHtml}
+                        ${googleHtml}
+                        ${moreHtml}
+                    </div>
+                `;
+
+                cell.addEventListener('click', () => openPanel(isoStr, lunar));
+                grid.appendChild(cell);
+            }
+        }
+
+        // --- 3. QUẢN LÝ SIDE PANEL (TASKS) ---
+        function openPanel(isoStr, lunarData) {
+            selectedDateStr = isoStr;
+            // Xóa style selected cũ
+            document.querySelectorAll('.calendar-cell').forEach(c => c.classList.remove('selected'));
+            // Highlight ô hiện tại
+            const currentCell = document.querySelector(`.calendar-cell[data-date="${isoStr}"]`);
+            if (currentCell) currentCell.classList.add('selected');
+
+            panelDateLabel.textContent = formatDisplay(isoStr);
+            if(lunarData) {
+                panelLunarLabel.textContent = `Âm lịch: ${lunarData.lDay}/${lunarData.lMonth}/${lunarData.lYear} ${lunarData.isLeap?'(Nhuận)':''}`;
+            }
+
+            renderTasksList();
+            
+            panel.classList.remove('translate-x-full');
+            overlay.classList.remove('hidden');
+            setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+        }
+
+        function closePanel() {
+            panel.classList.add('translate-x-full');
+            overlay.classList.add('opacity-0');
+            document.querySelectorAll('.calendar-cell').forEach(c => c.classList.remove('selected'));
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+            selectedDateStr = null;
+        }
+
+        function renderListView() {
+            const container = document.getElementById('viewList');
+            container.innerHTML = '';
+            
+            const activeTasks = tasks.filter(t => !t.deleted);
+            if (activeTasks.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-20 text-gray-400">
+                        <i class="ph ph-coffee text-5xl mb-3"></i>
+                        <p class="text-sm font-medium">Chưa có công việc nào trong danh sách.</p>
+                    </div>`;
+                return;
+            }
+
+            // Nhóm công việc theo ngày
+            const groups = {};
+            activeTasks.forEach(t => {
+                if (!groups[t.date]) groups[t.date] = [];
+                groups[t.date].push(t);
+            });
+
+            // Sắp xếp các ngày tăng dần (Từ quá khứ tới tương lai)
+            const sortedDates = Object.keys(groups).sort((a, b) => new Date(a) - new Date(b));
+
+            sortedDates.forEach(dateStr => {
+                const groupTasks = groups[dateStr];
+                const dateObj = new Date(dateStr);
+                const lunar = getLunarDate(dateObj.getDate(), dateObj.getMonth() + 1, dateObj.getFullYear());
+                const displayDate = `${dateObj.getDate().toString().padStart(2, '0')}/${(dateObj.getMonth()+1).toString().padStart(2, '0')}/${dateObj.getFullYear()}`;
+                const dayOfWeek = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][dateObj.getDay()];
+
+                const groupEl = document.createElement('div');
+                groupEl.className = 'mb-6 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm';
+                
+                let html = `
+                    <div class="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
+                        <div class="font-bold text-gray-700 text-sm flex items-center gap-2">
+                            <i class="ph-fill ph-calendar-blank text-primary"></i> ${dayOfWeek}, ${displayDate}
+                        </div>
+                        <div class="text-[10px] font-bold text-lunarText bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-md">
+                            Âm lịch: ${lunar.lDay}/${lunar.lMonth} ${lunar.isLeap ? '(Nhuận)' : ''}
+                        </div>
+                    </div>
+                    <div class="p-3 flex flex-col gap-2">
+                `;
+
+                groupTasks.forEach(task => {
+                    html += `
+                        <div class="todo-item ${task.completed ? 'completed' : ''} !mb-0 shadow-none border-gray-100 hover:border-primary/30">
+                            <div class="flex-1 flex gap-3 cursor-pointer" onclick="toggleTask('${task.id}')">
+                                <div class="checkbox">
+                                    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </div>
+                                <div>
+                                    <p class="todo-text text-sm font-medium ${task.completed ? 'text-gray-400' : 'text-gray-800'}">${escapeHtml(task.text)}</p>
+                                    ${task.completedAt ? `<p class="text-[10px] text-green-500 font-semibold mt-0.5 flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> Xong lúc ${getTimeStr(task.completedAt)}</p>` : ''}
+                                </div>
+                            </div>
+                            <button onclick="deleteTask('${task.id}')" class="text-gray-300 hover:text-red-500 p-1.5 rounded transition-colors bg-gray-50 hover:bg-red-50">
+                                <i class="ph-fill ph-trash text-base"></i>
+                            </button>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+                groupEl.innerHTML = html;
+                container.appendChild(groupEl);
+            });
+        }
+
+        function renderTasksList() {
+            taskList.innerHTML = '';
+            const dayTasks = tasks.filter(t => !t.deleted && t.date === selectedDateStr);
+            
+            if (dayTasks.length === 0) {
+                emptyTaskState.classList.remove('hidden');
+            } else {
+                emptyTaskState.classList.add('hidden');
+                dayTasks.forEach(task => {
+                    const div = document.createElement('div');
+                    div.className = `todo-item ${task.completed ? 'completed' : ''}`;
+                    div.innerHTML = `
+                        <div class="flex-1 flex gap-3 cursor-pointer" onclick="toggleTask('${task.id}')">
+                            <div class="checkbox">
+                                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
+                            <div>
+                                <p class="todo-text text-sm font-medium ${task.completed ? 'text-gray-400' : 'text-gray-800'}">${escapeHtml(task.text)}</p>
+                                ${task.completedAt ? `<p class="text-[10px] text-green-500 font-semibold mt-0.5">✓ ${getTimeStr(task.completedAt)}</p>` : ''}
+                            </div>
+                        </div>
+                        <button onclick="deleteTask('${task.id}')" class="text-gray-300 hover:text-red-500 p-1 rounded transition-colors"><i class="ph-fill ph-trash"></i></button>
+                    `;
+                    taskList.appendChild(div);
+                });
+            }
+        }
+
+        // Task Actions
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = taskInput.value.trim();
+            if (text && selectedDateStr) {
+                tasks.push({
+                    id: 't_' + Date.now(),
+                    text: text,
+                    date: selectedDateStr,
+                    completed: false,
+                    deleted: false,
+                    completedAt: null
+                });
+                taskInput.value = '';
+                saveData(); renderTasksList(); renderCalendar();
+                // Phục hồi selected
+                document.querySelector(`.calendar-cell[data-date="${selectedDateStr}"]`)?.classList.add('selected');
+            }
+        });
+
+        window.toggleTask = (id) => {
+            const task = tasks.find(t => t.id === id);
+            if(task) {
+                const now = new Date().toISOString();
+                task.completed = !task.completed;
+                task.completedAt = task.completed ? now : null;
+                
+                // Add Log
+                logs.unshift({
+                    id: 'l_' + Date.now(),
+                    taskId: task.id,
+                    taskText: task.text,
+                    taskDate: task.date,
+                    timestamp: now,
+                    action: task.completed ? 'completed' : 'uncompleted'
+                });
+                
+                saveData(); renderTasksList(); renderCalendar();
+                if (currentView === 'list') renderListView();
+                document.querySelector(`.calendar-cell[data-date="${selectedDateStr}"]`)?.classList.add('selected');
+            }
+        };
+
+        window.deleteTask = (id) => {
+            const task = tasks.find(t => t.id === id);
+            if(task) { task.deleted = true; task.deletedAt = new Date().toISOString(); }
+            saveData(); renderTasksList(); renderCalendar();
+            if (currentView === 'list') renderListView();
+            document.querySelector(`.calendar-cell[data-date="${selectedDateStr}"]`)?.classList.add('selected');
+        };
+
+        function escapeHtml(str) { return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+        // --- 4. Modals & History ---
+        const modalTimeline = document.getElementById('modalTimeline');
+        const modalHistory = document.getElementById('modalHistory');
+
+        function renderTimeline() {
+            const container = document.getElementById('timelineContent');
+            const search = document.getElementById('timelineSearch').value.toLowerCase();
+            container.innerHTML = '';
+            
+            const filtered = logs.filter(l => !search || l.taskText.toLowerCase().includes(search));
+            if(filtered.length === 0) { container.innerHTML = '<p class="text-center text-gray-400 mt-10">Không có nhật ký.</p>'; return; }
+
+            filtered.forEach(log => {
+                const isComp = log.action === 'completed';
+                const div = document.createElement('div');
+                div.className = 'timeline-event';
+                div.innerHTML = `
+                    <div class="timeline-marker ${isComp?'':'undo'}">
+                        ${isComp ? '<i class="ph-bold ph-check text-xs"></i>' : '<i class="ph-bold ph-arrow-u-up-left text-xs"></i>'}
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-bold text-gray-500">${getTimeStr(log.timestamp)} - ${formatDisplay(log.timestamp.slice(0,10))}</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isComp?'bg-green-100 text-green-600':'bg-gray-200 text-gray-600'}">${isComp?'Hoàn thành':'Bỏ đánh dấu'}</span>
+                        </div>
+                        <p class="text-sm font-medium text-gray-800">${escapeHtml(log.taskText)}</p>
+                        <p class="text-xs text-gray-500 mt-1">Lịch gốc: ${formatDisplay(log.taskDate)}</p>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderTrash() {
+            const container = document.getElementById('trashContent');
+            container.innerHTML = '';
+            const deleted = tasks.filter(t => t.deleted).sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+            
+            if(deleted.length===0) { container.innerHTML = '<p class="text-center text-gray-400 mt-10">Thùng rác trống.</p>'; return; }
+
+            deleted.forEach(task => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-3 border border-gray-200 rounded-lg bg-gray-50';
+                div.innerHTML = `
+                    <div>
+                        <p class="text-sm font-medium ${task.completed ? 'line-through text-gray-400' : 'text-gray-800'}">${escapeHtml(task.text)}</p>
+                        <p class="text-xs text-gray-500">Lịch: ${formatDisplay(task.date)}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="restoreTask('${task.id}')" class="text-xs px-2 py-1 bg-white border border-blue-200 text-blue-600 rounded hover:bg-blue-50">Khôi phục</button>
+                        <button onclick="purgeTask('${task.id}')" class="text-xs px-2 py-1 bg-white border border-red-200 text-red-600 rounded hover:bg-red-50">Xóa hẳn</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.restoreTask = (id) => { const t = tasks.find(x=>x.id===id); if(t){t.deleted=false; saveData(); renderTrash(); renderCalendar();} };
+        window.purgeTask = (id) => { tasks = tasks.filter(x=>x.id!==id); saveData(); renderTrash(); };
+        
+        // --- 5. Event Listeners Khởi tạo ---
+        document.getElementById('btnPrevMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); loadGoogleEvents(); });
+        document.getElementById('btnNextMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); loadGoogleEvents(); });
+        document.getElementById('btnToday').addEventListener('click', () => { currentDate = new Date(); renderCalendar(); loadGoogleEvents(); });
+        document.getElementById('btnGoogleCalendar').addEventListener('click', connectGoogleCalendar);
+        
+        document.getElementById('btnCalendarView').addEventListener('click', () => {
+            currentView = 'calendar';
+            
+            // Cập nhật UI Nút
+            document.getElementById('btnCalendarView').className = "px-4 py-1.5 bg-white shadow-sm rounded-md text-sm font-medium text-gray-800 transition-colors";
+            document.getElementById('btnListView').className = "px-4 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors rounded-md";
+            
+            // Chuyển đổi Container
+            document.getElementById('viewCalendar').classList.remove('hidden');
+            document.getElementById('viewCalendar').classList.add('flex', 'flex-col');
+            document.getElementById('viewList').classList.add('hidden');
+            document.getElementById('viewNotes').classList.add('hidden');
+            
+            // Hiện control chuyển tháng
+            document.getElementById('monthControls').style.visibility = 'visible';
+        });
+
+        document.getElementById('btnListView').addEventListener('click', () => {
+            currentView = 'list';
+            
+            // Cập nhật UI Nút
+            document.getElementById('btnListView').className = "px-4 py-1.5 bg-white shadow-sm rounded-md text-sm font-medium text-gray-800 transition-colors";
+            document.getElementById('btnCalendarView').className = "px-4 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors rounded-md";
+            
+            // Chuyển đổi Container
+            document.getElementById('viewCalendar').classList.add('hidden');
+            document.getElementById('viewCalendar').classList.remove('flex', 'flex-col');
+            document.getElementById('viewList').classList.remove('hidden');
+            document.getElementById('viewNotes').classList.add('hidden');
+            
+            // Ẩn control chuyển tháng do hiển thị toàn bộ
+            document.getElementById('monthControls').style.visibility = 'hidden';
+            
+            renderListView();
+        });
+
+        document.getElementById('btnNotesView').addEventListener('click', () => {
+            currentView = 'notes';
+            document.getElementById('btnNotesView').className = "px-4 py-1.5 bg-white shadow-sm rounded-md text-sm font-medium text-gray-800 transition-colors";
+            document.getElementById('btnCalendarView').className = "px-4 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors rounded-md";
+            document.getElementById('btnListView').className = "px-4 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors rounded-md";
+            document.getElementById('viewCalendar').classList.add('hidden');
+            document.getElementById('viewCalendar').classList.remove('flex', 'flex-col');
+            document.getElementById('viewList').classList.add('hidden');
+            document.getElementById('viewNotes').classList.remove('hidden');
+            document.getElementById('monthControls').style.visibility = 'hidden';
+            renderNotes();
+        });
+
+        document.getElementById('btnAddNote').addEventListener('click', createNote);
+        document.getElementById('btnAddFolder').addEventListener('click', () => {
+            const name = window.prompt('Tên thư mục mới:');
+            if (!name || !name.trim()) return;
+            const folder = { id: `folder_${Date.now()}`, name: name.trim(), parentId: selectedFolderId };
+            noteFolders.push(folder);
+            selectedFolderId = folder.id;
+            selectedNoteId = null;
+            saveNotes();
+            renderNotes();
+        });
+        document.getElementById('noteTitleInput').addEventListener('input', updateSelectedNote);
+        document.getElementById('noteContentInput').addEventListener('input', updateSelectedNote);
+        document.getElementById('btnDeleteNote').addEventListener('click', () => {
+            if (!selectedNoteId) return;
+            notes = notes.filter(note => note.id !== selectedNoteId);
+            selectedNoteId = null;
+            saveNotes();
+            renderNotes();
+        });
+
+        document.getElementById('btnClosePanel').addEventListener('click', closePanel);
+        overlay.addEventListener('click', closePanel);
+
+        // Modals
+        document.getElementById('btnOpenTimeline').addEventListener('click', () => { renderTimeline(); modalTimeline.classList.add('open'); });
+        document.getElementById('timelineSearch').addEventListener('input', renderTimeline);
+        document.getElementById('btnClearTimeline').addEventListener('click', () => { logs = []; saveData(); renderTimeline(); });
+        
+        document.getElementById('btnOpenHistory').addEventListener('click', () => { renderTrash(); modalHistory.classList.add('open'); });
+        document.getElementById('btnEmptyTrash').addEventListener('click', () => { tasks = tasks.filter(t => !t.deleted); saveData(); renderTrash(); });
+        
+        document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', () => {
+            modalTimeline.classList.remove('open'); modalHistory.classList.remove('open');
+        }));
+
+        // Khởi động
+        updateTrashBadge();
+        renderCalendar();
+        const googleApiWaiter = setInterval(() => {
+            initializeGoogleCalendar().then(() => {
+                if (googleTokenClient) clearInterval(googleApiWaiter);
+            }).catch(() => setGoogleStatus('Google Calendar chưa sẵn sàng'));
+        }, 300);
+    </script>
+</body>
+</html>

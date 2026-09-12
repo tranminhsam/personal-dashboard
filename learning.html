@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học tập - MySpace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root { --ink:#172033; --muted:#758097; --line:#e7eaf1; --blue:#536dfe; --green:#16a67a; --orange:#ee9441; --paper:#f6f7fb; }
+        * { box-sizing:border-box; } body { margin:0; background:var(--paper); color:var(--ink); font:14px 'DM Sans',sans-serif; } a { color:inherit; text-decoration:none; }
+        .app { min-height:100vh; display:flex; } aside { width:250px; flex-shrink:0; padding:25px 18px; background:#fff; border-right:1px solid var(--line); display:flex; flex-direction:column; justify-content:space-between; }
+        .brand { display:flex; align-items:center; gap:11px; padding:0 10px 30px; font:700 20px 'Space Grotesk'; } .brand i { color:var(--blue); font-size:29px; } nav { display:grid; gap:7px; }
+        nav a { display:flex; align-items:center; gap:13px; padding:12px 13px; color:var(--muted); border-radius:10px; font-weight:600; } nav a:hover, nav a.active { background:#edf0ff; color:#4056df; } nav i { font-size:21px; }
+        .profile { border-top:1px solid var(--line); padding:19px 10px 0; display:flex; gap:10px; align-items:center; } .avatar { width:37px; height:37px; border-radius:50%; display:grid; place-items:center; color:#fff; font-weight:700; background:var(--blue); } .profile small { display:block; color:var(--muted); margin-top:2px; }
+        main { min-width:0; flex:1; padding:30px clamp(20px,4vw,55px); } h1,h2,h3,p { margin:0; } h1,h2,h3 { font-family:'Space Grotesk'; } h1 { font-size:clamp(25px,3vw,32px); } h2 { font-size:18px; } .muted { color:var(--muted); }
+        .topbar { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; margin-bottom:25px; } .date { color:var(--muted); margin-top:7px; } .streak { display:flex; gap:8px; align-items:center; padding:10px 14px; border:1px solid #f6d8ad; background:#fff9ee; color:#bd6e15; border-radius:10px; font-weight:700; }
+        .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin-bottom:19px; } .card,.panel { background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 5px 18px rgba(32,47,85,.035); } .stat { padding:18px; } .stat-label { color:var(--muted); font-weight:600; display:flex; gap:7px; align-items:center; } .stat-label i { color:var(--accent); font-size:19px; } .stat-value { margin-top:10px; font:700 27px 'Space Grotesk'; }
+        .content { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr); gap:19px; } .panel { padding:22px; } .panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; } .language-tabs { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:18px; } .language-tabs button,.secondary { border:1px solid var(--line); background:#fff; color:var(--muted); padding:8px 12px; border-radius:8px; cursor:pointer; font:600 12px 'DM Sans'; } .language-tabs button.active { background:#edf0ff; border-color:#aeb9ff; color:#4056df; }
+        .word-list,.skill-list { display:grid; gap:10px; max-height:410px; overflow:auto; } .word { display:grid; grid-template-columns:1fr 1fr auto; gap:16px; align-items:center; padding:13px 0; border-bottom:1px solid #f0f1f5; } .word strong,.word em { display:block; } .word em { color:var(--muted); font-size:12px; margin-top:4px; } .word-example { color:#59647a; font-size:13px; line-height:1.4; } .delete { color:#c5cad4; border:0; background:transparent; cursor:pointer; font-size:17px; } .delete:hover { color:#dc5b70; }
+        .form { display:grid; gap:9px; margin-top:18px; padding-top:17px; border-top:1px solid var(--line); } input,textarea,select { width:100%; border:1px solid var(--line); border-radius:8px; padding:10px 11px; outline:none; font:13px 'DM Sans'; color:var(--ink); } textarea { resize:vertical; min-height:74px; } input:focus,textarea:focus,select:focus { border-color:#91a0ff; box-shadow:0 0 0 3px #edf0ff; } .primary { border:0; background:var(--blue); color:#fff; padding:10px 13px; border-radius:8px; cursor:pointer; font:700 13px 'DM Sans'; }
+        .skill { display:flex; gap:12px; align-items:flex-start; padding:13px 0; border-bottom:1px solid #f0f1f5; } .skill-icon { width:34px; height:34px; display:grid; place-items:center; flex-shrink:0; color:var(--green); background:#e5f8f0; border-radius:9px; font-size:18px; } .skill strong { display:block; } .skill small { display:block; color:var(--muted); margin-top:4px; line-height:1.4; } .skill .delete { margin-left:auto; }
+        .empty { text-align:center; padding:28px 0; color:var(--muted); } .search { max-width:170px; }
+        @media(max-width:900px) { aside { width:76px; padding:20px 10px; } .brand { justify-content:center; padding:0 0 30px; } .brand span,nav span,.profile>div:not(.avatar) { display:none; } nav a,.profile { justify-content:center; } .content { grid-template-columns:1fr; } }
+        @media(max-width:650px) { main { padding:22px 15px; } .stats { grid-template-columns:repeat(2,1fr); } .topbar { align-items:flex-start; } .streak { font-size:0; padding:10px; } .streak i { font-size:20px; } .word { grid-template-columns:1fr; gap:6px; } .search { max-width:130px; } }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside><div><div class="brand"><i class="ph-fill ph-planet"></i><span>MySpace</span></div><nav>
+        <a href="dashboard.html"><i class="ph ph-squares-four"></i><span>Tổng quan</span></a>
+        <a href="work.html"><i class="ph ph-kanban"></i><span>Công việc</span></a>
+        <a class="active" href="learning.html"><i class="ph ph-book-open"></i><span>Học tập</span></a>
+        <a href="#"><i class="ph ph-heartbeat"></i><span>Cuộc sống</span></a>
+    </nav></div><div class="profile"><div class="avatar">U</div><div><strong>Người dùng</strong><small>Cá nhân</small></div></div></aside>
+    <main>
+        <header class="topbar"><div><h1>Không gian học tập</h1><p class="date">Ghi lại những điều mới và biến chúng thành tiến bộ mỗi ngày.</p></div><div class="streak"><i class="ph ph-fire"></i><span id="streakText">Bắt đầu hành trình</span></div></header>
+        <section class="stats"><div class="card stat" style="--accent:#536dfe"><div class="stat-label"><i class="ph ph-translate"></i>Từ mới</div><div class="stat-value" id="wordCount">0</div></div><div class="card stat" style="--accent:#16a67a"><div class="stat-label"><i class="ph ph-lightbulb"></i>Kỹ năng</div><div class="stat-value" id="skillCount">0</div></div><div class="card stat" style="--accent:#ee9441"><div class="stat-label"><i class="ph ph-books"></i>Ngôn ngữ</div><div class="stat-value" id="languageCount">2</div></div><div class="card stat" style="--accent:#d45e82"><div class="stat-label"><i class="ph ph-calendar-check"></i>Tuần này</div><div class="stat-value" id="weekCount">0</div></div></section>
+        <section class="content">
+            <div class="panel"><div class="panel-head"><h2>Từ mới & ví dụ</h2><input id="wordSearch" class="search" placeholder="Tìm từ mới..."></div><div class="language-tabs"><button class="active" data-language="English">English</button><button data-language="中文">中文</button></div><div id="wordList" class="word-list"></div><form id="wordForm" class="form"><div style="display:grid;grid-template-columns:1fr 1fr;gap:9px"><input id="wordInput" placeholder="Từ mới" required><input id="meaningInput" placeholder="Nghĩa / pinyin" required></div><textarea id="exampleInput" placeholder="Ví dụ sử dụng trong câu..." required></textarea><button class="primary" type="submit"><i class="ph ph-plus"></i> Thêm từ mới</button></form></div>
+            <div class="panel"><div class="panel-head"><h2>Kỹ năng mới học</h2><span class="muted" style="font-size:12px">Nhật ký tiến bộ</span></div><div id="skillList" class="skill-list"></div><form id="skillForm" class="form"><input id="skillInput" placeholder="Ví dụ: Phát âm âm /θ/" required><textarea id="skillNoteInput" placeholder="Bạn đã học được gì?" required></textarea><button class="primary" type="submit"><i class="ph ph-plus"></i> Ghi nhận kỹ năng</button></form></div>
+        </section>
+    </main>
+</div>
+<script>
+    const WORDS_KEY='learning_words_v1', SKILLS_KEY='learning_skills_v1'; let language='English';
+    let words=JSON.parse(localStorage.getItem(WORDS_KEY)||'[]'); let skills=JSON.parse(localStorage.getItem(SKILLS_KEY)||'[]');
+    const esc=value=>String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const save=()=>{localStorage.setItem(WORDS_KEY,JSON.stringify(words));localStorage.setItem(SKILLS_KEY,JSON.stringify(skills));};
+    function render(){ const query=document.getElementById('wordSearch').value.toLowerCase(); const selected=words.filter(item=>item.language===language&&(!query||`${item.word} ${item.meaning}`.toLowerCase().includes(query))); document.getElementById('wordCount').textContent=words.length; document.getElementById('skillCount').textContent=skills.length; document.getElementById('weekCount').textContent=words.filter(item=>Date.now()-item.createdAt<604800000).length+skills.filter(item=>Date.now()-item.createdAt<604800000).length; document.getElementById('wordList').innerHTML=selected.length?selected.map(item=>`<div class="word"><div><strong>${esc(item.word)}</strong><em>${esc(item.meaning)}</em></div><div class="word-example">${esc(item.example)}</div><button class="delete" data-word="${item.id}" title="Xóa"><i class="ph ph-trash"></i></button></div>`).join(''):'<div class="empty">Chưa có từ mới trong ngôn ngữ này.</div>'; document.getElementById('skillList').innerHTML=skills.length?skills.map(item=>`<div class="skill"><div class="skill-icon"><i class="ph ph-sparkle"></i></div><div><strong>${esc(item.name)}</strong><small>${esc(item.note)}</small></div><button class="delete" data-skill="${item.id}" title="Xóa"><i class="ph ph-trash"></i></button></div>`).join(''):'<div class="empty">Ghi lại kỹ năng đầu tiên của bạn.</div>'; document.getElementById('streakText').textContent=words.length||skills.length?'Đang duy trì nhịp học':'Bắt đầu hành trình'; document.querySelectorAll('[data-word]').forEach(button=>button.onclick=()=>{words=words.filter(item=>item.id!==button.dataset.word);save();render();}); document.querySelectorAll('[data-skill]').forEach(button=>button.onclick=()=>{skills=skills.filter(item=>item.id!==button.dataset.skill);save();render();}); }
+    document.querySelectorAll('[data-language]').forEach(button=>button.onclick=()=>{language=button.dataset.language;document.querySelectorAll('[data-language]').forEach(item=>item.classList.toggle('active',item===button));render();});
+    document.getElementById('wordSearch').oninput=render;
+    document.getElementById('wordForm').onsubmit=event=>{event.preventDefault();words.unshift({id:`word_${Date.now()}`,language,word:wordInput.value.trim(),meaning:meaningInput.value.trim(),example:exampleInput.value.trim(),createdAt:Date.now()});event.target.reset();save();render();};
+    document.getElementById('skillForm').onsubmit=event=>{event.preventDefault();skills.unshift({id:`skill_${Date.now()}`,name:skillInput.value.trim(),note:skillNoteInput.value.trim(),createdAt:Date.now()});event.target.reset();save();render();}; render();
+</script>
+</body>
+</html>
