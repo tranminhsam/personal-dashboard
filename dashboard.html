@@ -21,6 +21,9 @@
 		nav a { display: flex; align-items: center; gap: 13px; padding: 12px 13px; color: var(--muted); border-radius: 10px; font-weight: 600; }
 		nav a:hover, nav a.active { background: #edf0ff; color: #4056df; }
 		nav i { font-size: 21px; }
+		.nav-divider { border-top: 1px solid var(--line); margin: 10px 10px 3px; }
+		nav a.notes-link { padding: 16px 13px; background: #fff8ed; color: #b86c18; font-size: 15px; }
+		nav a.notes-link:hover { background: #fff0d7; color: #a35d0f; }
 		.profile { border-top: 1px solid var(--line); padding: 19px 10px 0; display: flex; gap: 10px; align-items: center; }
 		.avatar { width: 37px; height: 37px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; background: #536dfe; }
 		.profile strong, .profile small { display: block; }
@@ -84,8 +87,18 @@
 		.task-body strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 		.task-body small { display: block; color: var(--muted); margin-top: 4px; }
 		.task-date { color: var(--orange); font-size: 11px; font-weight: 700; white-space: nowrap; }
+		.summary-section { margin-top: 19px; }
+		.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+		.summary-card { display: block; padding: 16px; border: 1px solid var(--line); border-radius: 11px; transition: border-color .2s, transform .2s, box-shadow .2s; }
+		.summary-card:hover { border-color: #9daaff; box-shadow: 0 5px 14px rgba(83, 109, 254, .1); transform: translateY(-2px); }
+		.summary-head { display: flex; align-items: center; gap: 9px; }
+		.summary-icon { width: 32px; height: 32px; display: grid; place-items: center; color: var(--summary-color); background: var(--summary-tint); border-radius: 9px; font-size: 17px; }
+		.summary-head strong { font: 700 14px 'Space Grotesk'; }
+		.summary-value { margin-top: 16px; font: 700 25px 'Space Grotesk'; }
+		.summary-detail { color: var(--muted); font-size: 12px; margin-top: 4px; }
+		.summary-status { display: inline-flex; align-items: center; gap: 5px; margin-top: 13px; color: var(--summary-color); font-size: 11px; font-weight: 700; }
 		.empty { padding: 28px 0; text-align: center; color: var(--muted); }
-		@media (max-width: 900px) { aside { width: 76px; padding: 20px 10px; } .brand { justify-content: center; padding: 0 0 30px; } .brand span, nav span, .profile > div:not(.avatar) { display: none; } nav a { justify-content: center; } .profile { justify-content: center; padding-left: 0; padding-right: 0; } }
+		@media (max-width: 900px) { aside { width: 76px; padding: 20px 10px; } .brand { justify-content: center; padding: 0 0 30px; } .brand span, nav span, .profile > div:not(.avatar) { display: none; } nav a { justify-content: center; } .profile { justify-content: center; padding-left: 0; padding-right: 0; } .summary-grid { grid-template-columns: 1fr; } }
 		@media (max-width: 900px) { .month-grid { grid-template-columns: repeat(3, 1fr); } }
 		@media (max-width: 700px) { main { padding: 22px 15px; } .topbar { align-items: flex-start; } .date-chip { font-size: 0; padding: 9px; } .date-chip i { font-size: 20px; } .stats { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: 1fr; } .chart-wrap { grid-template-columns: 150px 1fr; gap: 13px; } .donut { width: 145px; } .donut::after { width: 98px; } .week-chart { gap: 8px; } .month-grid { grid-template-columns: repeat(2, 1fr); } }
 	</style>
@@ -99,7 +112,10 @@
 					<a class="active" href="dashboard.html"><i class="ph ph-squares-four"></i><span>Tổng quan</span></a>
 					<a href="work.html"><i class="ph ph-kanban"></i><span>Công việc</span></a>
 					<a href="learning.html"><i class="ph ph-book-open"></i><span>Học tập</span></a>
+					<a href="skills.html"><i class="ph ph-toolbox"></i><span>Kỹ năng</span></a>
 					<a href="#"><i class="ph ph-heartbeat"></i><span>Cuộc sống</span></a>
+					<div class="nav-divider"></div>
+					<a class="notes-link" href="monthly.html#notes"><i class="ph ph-notebook"></i><span>Ghi chú</span></a>
 				</nav>
 			</div>
 			<div class="profile"><div class="avatar">U</div><div><strong>Người dùng</strong><small>Cá nhân</small></div></div>
@@ -115,6 +131,7 @@
 				<div class="stat" style="--accent:#16a67a;--tint:#ddf6ed"><div class="stat-label"><i class="ph ph-check-circle"></i> Đã hoàn thành</div><div class="stat-value" id="completedCount">0</div><div class="stat-note">Tiến độ hiện tại</div></div>
 				<div class="stat" style="--accent:#d45e82;--tint:#fde8ef"><div class="stat-label"><i class="ph ph-calendar-plus"></i> Sắp tới</div><div class="stat-value" id="upcomingCount">0</div><div class="stat-note">Trong 7 ngày tới</div></div>
 			</section>
+			<section class="panel summary-section"><div class="panel-head"><h2>Tóm tắt các không gian</h2><button class="refresh" id="summaryRefreshButton"><i class="ph ph-arrows-clockwise"></i>Cập nhật</button></div><div class="summary-grid" id="summaryGrid"></div></section>
 			<section class="panel year-overview"><div class="panel-head"><h2>Lịch năm <span id="yearLabel"></span></h2><span class="year-label">Chọn tháng để mở lịch</span></div><div class="month-grid" id="monthGrid"></div></section>
 			<section class="grid">
 				<div class="panel"><div class="panel-head"><h2>Tiến độ công việc</h2><button class="refresh" id="refreshButton"><i class="ph ph-arrows-clockwise"></i>Cập nhật</button></div><div class="chart-wrap"><div class="donut" id="donut"><div class="donut-center"><strong id="progressPercent">0%</strong><span>hoàn thành</span></div></div><div class="legend"><div class="legend-row"><span class="legend-label"><i class="dot" style="--dot:#16a67a"></i>Đã hoàn thành</span><strong id="legendDone">0</strong></div><div class="legend-row"><span class="legend-label"><i class="dot" style="--dot:#e9edf5"></i>Đang chờ xử lý</span><strong id="legendPending">0</strong></div><div class="legend-row"><span class="legend-label"><i class="dot" style="--dot:#ee9441"></i>Quá hạn</span><strong id="legendOverdue">0</strong></div></div></div></div>
@@ -125,12 +142,21 @@
 	</div>
 	<script>
 		const STORAGE_KEY = 'monthly_calendar_tasks_v1';
+		const SUMMARY_TABS = [
+			{ title: 'Công việc', icon: 'ph-kanban', href: 'work.html', color: '#536dfe', tint: '#e9edff', getSummary: () => { const items = readArray(STORAGE_KEY).filter(item => !item.deleted); const pending = items.filter(item => !item.completed).length; return { value: items.length, detail: `${pending} việc chưa hoàn thành`, status: 'Đang theo dõi' }; } },
+			{ title: 'Học tập', icon: 'ph-book-open', href: 'learning.html', color: '#16a67a', tint: '#e5f8f0', getSummary: () => { const words = readArray('learning_words_v1'); const skills = readArray('learning_skills_v1'); return { value: words.length + skills.length, detail: `${words.length} từ mới · ${skills.length} kỹ năng`, status: 'Đang duy trì nhịp học' }; } },
+			{ title: 'Cuộc sống', icon: 'ph-heartbeat', href: '#', color: '#d45e82', tint: '#fde8ef', getSummary: () => ({ value: 0, detail: 'Chưa có dữ liệu để tổng hợp', status: 'Sẵn sàng kết nối' }) }
+		];
 		const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 		const monthNames = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
 		const formatDate = date => `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
 		const iso = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 		const escapeHtml = text => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-		function loadTasks() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
+		function readArray(key) { try { const value = JSON.parse(localStorage.getItem(key)); return Array.isArray(value) ? value : []; } catch { return []; } }
+		function loadTasks() { return readArray(STORAGE_KEY); }
+		function renderSummaries() {
+			document.getElementById('summaryGrid').innerHTML = SUMMARY_TABS.map(tab => { const summary = tab.getSummary(); return `<a class="summary-card" href="${tab.href}" style="--summary-color:${tab.color};--summary-tint:${tab.tint}"><div class="summary-head"><span class="summary-icon"><i class="ph ${tab.icon}"></i></span><strong>${tab.title}</strong></div><div class="summary-value">${summary.value}</div><div class="summary-detail">${summary.detail}</div><div class="summary-status"><i class="ph ph-circle-fill"></i>${summary.status}</div></a>`; }).join('');
+		}
 		function render() {
 			const today = new Date();
 			const tasks = loadTasks().filter(task => !task.deleted);
@@ -149,6 +175,7 @@
 			document.getElementById('legendPending').textContent = pending.length;
 			document.getElementById('legendOverdue').textContent = overdue.length;
 			document.getElementById('donut').style.setProperty('--done', `${percent}%`);
+			renderSummaries();
 			renderYear(tasks, today);
 			renderWeek(tasks, today);
 			const upcomingList = upcoming.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
@@ -173,6 +200,7 @@
 			document.getElementById('weekChart').innerHTML = days.map((date, index) => `<div class="bar-day"><div class="bar-track"><div class="bar" style="height:${Math.max(counts[index] / max * 100, counts[index] ? 8 : 3)}%" title="${counts[index]} công việc"></div></div><span>${dayNames[date.getDay()]}</span></div>`).join('');
 		}
 		document.getElementById('refreshButton').addEventListener('click', render);
+		document.getElementById('summaryRefreshButton').addEventListener('click', renderSummaries);
 		window.addEventListener('storage', render);
 		render();
 	</script>

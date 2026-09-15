@@ -211,10 +211,19 @@
                     <i class="ph ph-book-open text-xl"></i>
                     <span class="ml-3 font-medium hidden lg:block">Học tập</span>
                 </a>
+                <a href="skills.html" class="flex items-center px-3 py-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors">
+                    <i class="ph ph-toolbox text-xl"></i>
+                    <span class="ml-3 font-medium hidden lg:block">Kỹ năng</span>
+                </a>
                 <a href="#" class="flex items-center px-3 py-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors">
                     <i class="ph ph-heartbeat text-xl"></i>
                     <span class="ml-3 font-medium hidden lg:block">Cuộc sống</span>
                 </a>
+				<div class="my-3 border-t border-gray-200"></div>
+				<a href="monthly.html#notes" class="flex items-center px-3 py-3 text-base font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
+					<i class="ph ph-notebook text-2xl"></i>
+					<span class="ml-3 font-bold hidden lg:block">Ghi chú</span>
+				</a>
             </nav>
         </div>
         <div class="p-4 border-t border-gray-200 flex items-center justify-center lg:justify-start">
@@ -259,12 +268,12 @@
                         <button id="btnNextMonth" class="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600"><i class="ph ph-caret-right text-xl"></i></button>
                     </div>
                     
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3" id="viewControls">
                         <!-- View Toggle -->
                         <div class="flex bg-gray-100 p-1 rounded-lg">
                             <button id="btnCalendarView" class="px-4 py-1.5 bg-white shadow-sm rounded-md text-sm font-medium text-gray-800 transition-colors">Lịch</button>
                             <button id="btnListView" class="px-4 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors rounded-md">Danh sách</button>
-                            <button id="btnNotesView" class="px-4 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors rounded-md">Ghi chú</button>
+                            <button id="btnNotesView" style="display:none">Ghi chú</button>
                         </div>
                         <button id="btnToday" class="px-4 py-2 bg-indigo-50 text-primary hover:bg-indigo-100 font-semibold rounded-lg transition-colors border border-indigo-100 hidden sm:block">
                             Về Hôm nay
@@ -552,6 +561,7 @@
         // --- 2. ỨNG DỤNG LỊCH THÁNG ---
         const STORAGE_KEY = 'monthly_calendar_tasks_v1';
         const LOGS_KEY = 'monthly_calendar_logs_v1';
+        const WORK_TIMELINE_KEY = 'work_timeline_v1';
         const NOTES_KEY = 'monthly_notes_v1';
         const FOLDERS_KEY = 'monthly_note_folders_v1';
         
@@ -910,6 +920,11 @@
                     timestamp: now,
                     action: task.completed ? 'completed' : 'uncompleted'
                 });
+                if (task.completed) {
+                    const workTimeline = JSON.parse(localStorage.getItem(WORK_TIMELINE_KEY) || '[]');
+                    workTimeline.unshift({ id: 'work_log_' + Date.now(), taskId: task.id, text: task.text, at: now });
+                    localStorage.setItem(WORK_TIMELINE_KEY, JSON.stringify(workTimeline));
+                }
                 
                 saveData(); renderTasksList(); renderCalendar();
                 if (currentView === 'list') renderListView();
@@ -1008,6 +1023,7 @@
             
             // Hiện control chuyển tháng
             document.getElementById('monthControls').style.visibility = 'visible';
+            document.getElementById('viewControls').style.display = 'flex';
         });
 
         document.getElementById('btnListView').addEventListener('click', () => {
@@ -1025,6 +1041,7 @@
             
             // Ẩn control chuyển tháng do hiển thị toàn bộ
             document.getElementById('monthControls').style.visibility = 'hidden';
+            document.getElementById('viewControls').style.display = 'flex';
             
             renderListView();
         });
@@ -1039,6 +1056,7 @@
             document.getElementById('viewList').classList.add('hidden');
             document.getElementById('viewNotes').classList.remove('hidden');
             document.getElementById('monthControls').style.visibility = 'hidden';
+            document.getElementById('viewControls').style.display = 'none';
             renderNotes();
         });
 
@@ -1062,6 +1080,7 @@
             saveNotes();
             renderNotes();
         });
+		if (window.location.hash === '#notes') document.getElementById('btnNotesView').click();
 
         document.getElementById('btnClosePanel').addEventListener('click', closePanel);
         overlay.addEventListener('click', closePanel);
