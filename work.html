@@ -307,5 +307,80 @@ document.getElementById('refreshButton').addEventListener('click',render); windo
 
 
 </script>
+<!-- Nhúng Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { 
+    getFirestore, 
+    collection, 
+    onSnapshot, 
+    addDoc, 
+    updateDoc, 
+    deleteDoc, 
+    doc 
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // Thay bằng thông số cấu hình bạn lấy từ Bước 1
+const firebaseConfig = {
+  apiKey: "AIzaSyAeUgA0idSENtMLJ59r2LOgCq9TiKnEbsE",
+  authDomain: "personal-dashboard-e79c9.firebaseapp.com",
+  projectId: "personal-dashboard-e79c9",
+  storageBucket: "personal-dashboard-e79c9.firebasestorage.app",
+  messagingSenderId: "541064054933",
+  appId: "1:541064054933:web:edebd4d1de41af632a339c",
+  measurementId: "G-C3LN1J4CJP"
+};
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const todosRef = collection(db, "todos");
+
+  // Tự động đồng bộ thời gian thực giữa mọi máy
+  onSnapshot(todosRef, (snapshot) => {
+    todos = [];
+    snapshot.forEach((docItem) => {
+      todos.push({ id: docItem.id, ...docItem.data() });
+    });
+    renderMonthView();
+    updateTrashBadge();
+  });
+
+  // Gán các hàm ra window để nút bấm HTML gọi được
+  window.handleAddTask = async function() {
+    const text = taskInput.value.trim();
+    const dateVal = taskDate.value;
+    if (!text || !dateVal) return;
+
+    await addDoc(todosRef, {
+      text: text,
+      completed: false,
+      date: dateVal,
+      deleted: false,
+      createdAt: new Date().toISOString(),
+      completedAt: null
+    });
+    taskInput.value = '';
+  };
+
+  window.toggleTask = async function(id) {
+    const task = todos.find(t => t.id === id);
+    if (!task) return;
+    await updateDoc(doc(db, "todos", id), {
+      completed: !task.completed,
+      completedAt: !task.completed ? new Date().toISOString() : null
+    });
+  };
+
+  window.softDeleteTask = async function(id) {
+    await updateDoc(doc(db, "todos", id), {
+      deleted: true,
+      deletedAt: new Date().toISOString()
+    });
+  };
+
+  window.purgeTask = async function(id) {
+    await deleteDoc(doc(db, "todos", id));
+  };
+</script>
 </body>
 </html>
