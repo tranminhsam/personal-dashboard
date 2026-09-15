@@ -342,8 +342,16 @@ const firebaseConfig = {
     snapshot.forEach((docItem) => {
       todos.push({ id: docItem.id, ...docItem.data() });
     });
-    renderMonthView();
-    updateTrashBadge();
+    // Đổi thành hàm render của work.html (thường là renderTasks hoặc renderTodos)
+    if (typeof renderTasks === "function") {
+      renderTasks();
+    } else if (typeof renderTodos === "function") {
+      renderTodos();
+    }
+
+    if (typeof updateTrashBadge === "function") {
+      updateTrashBadge();
+    }
   });
 
   // Gán các hàm ra window để nút bấm HTML gọi được
