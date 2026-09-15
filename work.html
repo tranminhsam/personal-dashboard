@@ -73,6 +73,7 @@
 <div class="image-lightbox" id="imageLightbox" role="dialog" aria-modal="true" aria-label="Xem ảnh công việc"><button class="lightbox-close" id="closeImageLightbox" type="button" aria-label="Đóng ảnh"><i class="ph ph-x"></i></button><img id="lightboxImage" alt="Ảnh công việc phóng to"></div>
 
 <script>
+let todos = [];
 const STORAGE_KEY='monthly_calendar_tasks_v1', TIMELINE_KEY='work_timeline_v1', dayNames=['CN','T2','T3','T4','T5','T6','T7'];
 const iso=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 const displayDate=date=>`${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}`;
